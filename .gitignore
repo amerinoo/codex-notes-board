@@ -1,0 +1,15 @@
+# General
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Build outputs
+backend/target/
+frontend/dist/
+frontend/.vite/
+frontend/node_modules/
+
+# Local env / temp
+TASKS.md
+*.log
