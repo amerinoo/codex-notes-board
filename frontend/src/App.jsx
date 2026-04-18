@@ -123,9 +123,33 @@ function App() {
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <header className="mb-8 flex flex-col gap-3 border-b border-zinc-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-teal-700">Codex Notes Board</p>
-            <h1 className="mt-2 text-3xl font-semibold">Notes</h1>
+          <div className="flex items-start gap-3">
+            <div
+              aria-hidden="true"
+              className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-md border border-teal-200 bg-teal-50 text-teal-700"
+            >
+              <svg className="size-6" fill="none" viewBox="0 0 24 24">
+                <path
+                  d="M7 3.75h9.25A2.75 2.75 0 0 1 19 6.5v11A2.75 2.75 0 0 1 16.25 20.25H7A2 2 0 0 1 5 18.25V5.75a2 2 0 0 1 2-2Z"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.8"
+                />
+                <path
+                  d="M8.5 8h7M8.5 11.5h7M8.5 15h4"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.8"
+                />
+                <path d="M8 3.75v16.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-teal-700">Codex Notes Board</p>
+              <h1 className="mt-2 text-3xl font-semibold">Notes</h1>
+            </div>
           </div>
           <p className="text-sm text-zinc-600">{noteCountLabel}</p>
         </header>
