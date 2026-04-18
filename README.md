@@ -32,25 +32,69 @@ The app intentionally starts small and grows through incremental tasks.
 - Keep the project intentionally small
 - Prefer visible progress over hidden technical complexity
 - Avoid unnecessary abstractions
-- Do not add database, Docker, or authentication unless explicitly requested
+- Do not add database, Docker, or production authentication unless explicitly requested
 - Use agent skills from `.agents/skills/`
 
 ## Current state
-This repository currently contains the **bootstrap/base structure only**:
-- backend project skeleton
-- frontend project skeleton
-- demo-oriented `AGENTS.md`
-- agent skills copied into `.agents/skills/`
+This repository currently contains a working Notes Board demo:
+- Spring Boot REST API for notes
+- React UI connected to the backend
+- in-memory note storage
+- create, list, update, and delete flows
+- priorities: `Alta`, `Media`, and `Baja`
+- public and private note visibility
+- lightweight demo user context through the `X-User` request header
+- search, priority counters, and dark/light mode in the UI
+- backend and frontend test coverage for the main note flows
 
-Business features for notes should be added incrementally during the demo workflow.
+The demo user context is intentionally simple. It is useful for showing ownership and private notes during a live workflow demo, but it is not real authentication or security.
 
-## Expected first features
-- Note model
-- Note status enum
-- In-memory storage
-- REST API for notes
-- Visual cards UI
-- Frontend/backend integration
+## API
+### Health
+```http
+GET /api/health
+```
+
+Returns:
+```json
+{
+  "status": "ok"
+}
+```
+
+### Notes
+```http
+GET /api/notes
+POST /api/notes
+PUT /api/notes/{id}
+DELETE /api/notes/{id}
+```
+
+Notes use this shape:
+```json
+{
+  "id": 1,
+  "title": "Release plan",
+  "content": "Ship the board update",
+  "priority": "Alta",
+  "visibility": "PUBLIC",
+  "owner": "alice",
+  "createdAt": "2026-04-18T10:00:00Z",
+  "updatedAt": "2026-04-18T10:00:00Z"
+}
+```
+
+Create and update requests accept:
+```json
+{
+  "title": "Release plan",
+  "content": "ship the board update",
+  "priority": "Alta",
+  "visibility": "PUBLIC"
+}
+```
+
+`POST`, `PUT`, and `DELETE` require an `X-User` header. `GET /api/notes` returns public notes plus private notes owned by the current `X-User`, when that header is present.
 
 ## Local development
 ### Backend
@@ -66,6 +110,8 @@ npm install
 npm run dev
 ```
 
+By default, the frontend expects the backend at `http://localhost:8080`.
+
 ## Validation
 ### Backend
 ```bash
@@ -76,5 +122,6 @@ cd backend
 ### Frontend
 ```bash
 cd frontend
+npm test
 npm run build
 ```
