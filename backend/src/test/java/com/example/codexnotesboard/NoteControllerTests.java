@@ -53,6 +53,20 @@ class NoteControllerTests {
     }
 
     @Test
+    void capitalizesFirstContentLetterWhenCreatingNote() throws Exception {
+        mockMvc.perform(post("/api/notes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Demo note",
+                                  "content": " first note"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("First note"));
+    }
+
+    @Test
     void updatesExistingNote() throws Exception {
         createNote("Original", "Content");
 
@@ -61,13 +75,13 @@ class NoteControllerTests {
                         .content("""
                                 {
                                   "title": "Updated",
-                                  "content": "Changed content"
+                                  "content": "changed content"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.title").value("Updated"))
-                .andExpect(jsonPath("$.content").value("Changed content"));
+                .andExpect(jsonPath("$.content").value("changed content"));
     }
 
     @Test

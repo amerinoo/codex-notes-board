@@ -24,7 +24,8 @@ public class NoteService {
 
     public Note create(NoteRequest request) {
         Instant now = Instant.now(clock);
-        return noteRepository.save(new Note(null, clean(request.title()), clean(request.content()), now, now));
+        return noteRepository.save(new Note(
+                null, clean(request.title()), capitalizeFirstLetter(clean(request.content())), now, now));
     }
 
     public Optional<Note> update(Long id, NoteRequest request) {
@@ -39,6 +40,19 @@ public class NoteService {
 
     public boolean delete(Long id) {
         return noteRepository.deleteById(id);
+    }
+
+    private String capitalizeFirstLetter(String value) {
+        if (value.isEmpty()) {
+            return value;
+        }
+
+        char firstCharacter = value.charAt(0);
+        if (!Character.isLowerCase(firstCharacter)) {
+            return value;
+        }
+
+        return Character.toUpperCase(firstCharacter) + value.substring(1);
     }
 
     private String clean(String value) {
