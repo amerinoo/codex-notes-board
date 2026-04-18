@@ -38,18 +38,21 @@ class NoteControllerTests {
                         .content("""
                                 {
                                   "title": " Demo note ",
-                                  "content": " First note "
+                                  "content": " First note ",
+                                  "priority": "Alta"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.title").value("Demo note"))
-                .andExpect(jsonPath("$.content").value("First note"));
+                .andExpect(jsonPath("$.content").value("First note"))
+                .andExpect(jsonPath("$.priority").value("Alta"));
 
         mockMvc.perform(get("/api/notes"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].title").value("Demo note"));
+                .andExpect(jsonPath("$[0].title").value("Demo note"))
+                .andExpect(jsonPath("$[0].priority").value("Alta"));
     }
 
     @Test
@@ -67,6 +70,32 @@ class NoteControllerTests {
     }
 
     @Test
+    void defaultsMissingAndInvalidPriorityToMedia() throws Exception {
+        mockMvc.perform(post("/api/notes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Default priority",
+                                  "content": "Content"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.priority").value("Media"));
+
+        mockMvc.perform(post("/api/notes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Invalid priority",
+                                  "content": "Content",
+                                  "priority": "Critical"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.priority").value("Media"));
+    }
+
+    @Test
     void updatesExistingNote() throws Exception {
         createNote("Original", "Content");
 
@@ -75,13 +104,15 @@ class NoteControllerTests {
                         .content("""
                                 {
                                   "title": "Updated",
-                                  "content": "changed content"
+                                  "content": "changed content",
+                                  "priority": "Baja"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.title").value("Updated"))
-                .andExpect(jsonPath("$.content").value("changed content"));
+                .andExpect(jsonPath("$.content").value("changed content"))
+                .andExpect(jsonPath("$.priority").value("Baja"));
     }
 
     @Test

@@ -12,6 +12,7 @@ public class Note {
     private Long id;
     private String title;
     private String content;
+    private String priority;
     private Instant createdAt;
     private Instant updatedAt;
 }

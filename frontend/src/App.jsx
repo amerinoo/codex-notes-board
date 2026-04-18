@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 
 const NOTES_ENDPOINT = 'http://localhost:8080/api/notes'
-const EMPTY_FORM = { title: '', content: '' }
+const PRIORITIES = {
+  Alta: { label: 'Alta', card: 'border-red-200 bg-red-50', badge: 'border-red-200 bg-red-100 text-red-700' },
+  Media: { label: 'Media', card: 'border-amber-200 bg-amber-50', badge: 'border-amber-200 bg-amber-100 text-amber-800' },
+  Baja: { label: 'Baja', card: 'border-emerald-200 bg-emerald-50', badge: 'border-emerald-200 bg-emerald-100 text-emerald-700' },
+}
+const PRIORITY_OPTIONS = Object.keys(PRIORITIES)
+const DEFAULT_PRIORITY = 'Media'
+const EMPTY_FORM = { title: '', content: '', priority: DEFAULT_PRIORITY }
 
 function App() {
   const [notes, setNotes] = useState([])
@@ -50,7 +57,7 @@ function App() {
 
   function startEditing(note) {
     setEditingNoteId(note.id)
-    setForm({ title: note.title, content: note.content })
+    setForm({ title: note.title, content: note.content, priority: note.priority || DEFAULT_PRIORITY })
     setErrorMessage('')
   }
 
@@ -182,6 +189,23 @@ function App() {
               value={form.content}
             />
 
+            <label className="mt-4 block text-sm font-medium text-zinc-700" htmlFor="priority">
+              Priority
+            </label>
+            <select
+              className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-base outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
+              id="priority"
+              name="priority"
+              onChange={updateField}
+              value={form.priority}
+            >
+              {PRIORITY_OPTIONS.map((priority) => (
+                <option key={priority} value={priority}>
+                  {priority}
+                </option>
+              ))}
+            </select>
+
             {errorMessage && (
               <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>
             )}
@@ -215,30 +239,39 @@ function App() {
               </p>
             ) : (
               <ul className="grid gap-4 md:grid-cols-2">
-                {notes.map((note) => (
-                  <li className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm" key={note.id}>
-                    <h2 className="break-words text-xl font-semibold">{note.title || 'Untitled note'}</h2>
-                    <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-700">
-                      {note.content || 'No content'}
-                    </p>
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      <button
-                        className="rounded-md border border-teal-700 px-3 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-50"
-                        onClick={() => startEditing(note)}
-                        type="button"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50"
-                        onClick={() => deleteNote(note.id)}
-                        type="button"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </li>
-                ))}
+                {notes.map((note) => {
+                  const priority = PRIORITIES[note.priority] || PRIORITIES[DEFAULT_PRIORITY]
+
+                  return (
+                    <li className={`rounded-lg border p-5 shadow-sm ${priority.card}`} key={note.id}>
+                      <div className="flex items-start justify-between gap-3">
+                        <h2 className="break-words text-xl font-semibold">{note.title || 'Untitled note'}</h2>
+                        <span className={`shrink-0 rounded-md border px-2 py-1 text-xs font-semibold ${priority.badge}`}>
+                          {priority.label}
+                        </span>
+                      </div>
+                      <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-zinc-700">
+                        {note.content || 'No content'}
+                      </p>
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        <button
+                          className="rounded-md border border-teal-700 px-3 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-50"
+                          onClick={() => startEditing(note)}
+                          type="button"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="rounded-md border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50"
+                          onClick={() => deleteNote(note.id)}
+                          type="button"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>

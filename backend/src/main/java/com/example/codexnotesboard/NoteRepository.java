@@ -24,7 +24,7 @@ public class NoteRepository {
 
     public Note save(Note note) {
         Long id = note.getId() == null ? nextId.getAndIncrement() : note.getId();
-        Note saved = new Note(id, note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt());
+        Note saved = new Note(id, note.getTitle(), note.getContent(), note.getPriority(), note.getCreatedAt(), note.getUpdatedAt());
         notes.put(id, saved);
         return copy(saved);
     }
@@ -43,6 +43,6 @@ public class NoteRepository {
     }
 
     private Note copy(Note note) {
-        return new Note(note.getId(), note.getTitle(), note.getContent(), note.getCreatedAt(), note.getUpdatedAt());
+        return new Note(note.getId(), note.getTitle(), note.getContent(), note.getPriority(), note.getCreatedAt(), note.getUpdatedAt());
     }
 }
