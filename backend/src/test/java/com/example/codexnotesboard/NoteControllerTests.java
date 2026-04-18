@@ -34,19 +34,23 @@ class NoteControllerTests {
     @Test
     void createsAndListsNotes() throws Exception {
         mockMvc.perform(post("/api/notes")
+                        .header("X-User", "alice")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "title": " Demo note ",
                                   "content": " First note ",
-                                  "priority": "Alta"
+                                  "priority": "Alta",
+                                  "visibility": "PUBLIC"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.title").value("Demo note"))
                 .andExpect(jsonPath("$.content").value("First note"))
-                .andExpect(jsonPath("$.priority").value("Alta"));
+                .andExpect(jsonPath("$.priority").value("Alta"))
+                .andExpect(jsonPath("$.visibility").value("PUBLIC"))
+                .andExpect(jsonPath("$.owner").value("alice"));
 
         mockMvc.perform(get("/api/notes"))
                 .andExpect(status().isOk())
@@ -56,8 +60,22 @@ class NoteControllerTests {
     }
 
     @Test
+    void requiresUserWhenCreatingNote() throws Exception {
+        mockMvc.perform(post("/api/notes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Private",
+                                  "content": "Content"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void capitalizesFirstContentLetterWhenCreatingNote() throws Exception {
         mockMvc.perform(post("/api/notes")
+                        .header("X-User", "alice")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -72,6 +90,7 @@ class NoteControllerTests {
     @Test
     void defaultsMissingAndInvalidPriorityToMedia() throws Exception {
         mockMvc.perform(post("/api/notes")
+                        .header("X-User", "alice")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -83,6 +102,7 @@ class NoteControllerTests {
                 .andExpect(jsonPath("$.priority").value("Media"));
 
         mockMvc.perform(post("/api/notes")
+                        .header("X-User", "alice")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -96,28 +116,86 @@ class NoteControllerTests {
     }
 
     @Test
-    void updatesExistingNote() throws Exception {
-        createNote("Original", "Content");
+    void updatesExistingOwnedNote() throws Exception {
+        createNote("alice", "Original", "Content", "PUBLIC");
 
         mockMvc.perform(put("/api/notes/1")
+                        .header("X-User", "alice")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "title": "Updated",
                                   "content": "changed content",
-                                  "priority": "Baja"
+                                  "priority": "Baja",
+                                  "visibility": "PRIVATE"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.title").value("Updated"))
                 .andExpect(jsonPath("$.content").value("changed content"))
-                .andExpect(jsonPath("$.priority").value("Baja"));
+                .andExpect(jsonPath("$.priority").value("Baja"))
+                .andExpect(jsonPath("$.visibility").value("PRIVATE"));
+    }
+
+    @Test
+    void listsPublicNotesAndOwnPrivateNotesOnly() throws Exception {
+        createNote("alice", "Alice private", "Content", "PRIVATE");
+        createNote("alice", "Alice public", "Content", "PUBLIC");
+        createNote("bob", "Bob private", "Content", "PRIVATE");
+        createNote("bob", "Bob public", "Content", "PUBLIC");
+
+        mockMvc.perform(get("/api/notes").header("X-User", "alice"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[?(@.title == 'Alice private')]").exists())
+                .andExpect(jsonPath("$[?(@.title == 'Alice public')]").exists())
+                .andExpect(jsonPath("$[?(@.title == 'Bob public')]").exists())
+                .andExpect(jsonPath("$[?(@.title == 'Bob private')]").doesNotExist());
+
+        mockMvc.perform(get("/api/notes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[?(@.title == 'Alice public')]").exists())
+                .andExpect(jsonPath("$[?(@.title == 'Bob public')]").exists())
+                .andExpect(jsonPath("$[?(@.title == 'Alice private')]").doesNotExist());
+    }
+
+    @Test
+    void returnsNotFoundWhenUpdatingAnotherUsersNote() throws Exception {
+        createNote("alice", "Alice private", "Content", "PRIVATE");
+
+        mockMvc.perform(put("/api/notes/1")
+                        .header("X-User", "bob")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Updated",
+                                  "content": "changed content"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deletesOwnedNoteAndHidesOthersWithNotFound() throws Exception {
+        createNote("alice", "Alice private", "Content", "PRIVATE");
+
+        mockMvc.perform(delete("/api/notes/1").header("X-User", "bob"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/api/notes/1").header("X-User", "alice"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/notes").header("X-User", "alice"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
     void returnsNotFoundWhenUpdatingMissingNote() throws Exception {
         mockMvc.perform(put("/api/notes/99")
+                        .header("X-User", "alice")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -129,32 +207,22 @@ class NoteControllerTests {
     }
 
     @Test
-    void deletesExistingNote() throws Exception {
-        createNote("Delete me", "Content");
-
-        mockMvc.perform(delete("/api/notes/1"))
-                .andExpect(status().isNoContent());
-
-        mockMvc.perform(get("/api/notes"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
-    }
-
-    @Test
     void returnsNotFoundWhenDeletingMissingNote() throws Exception {
-        mockMvc.perform(delete("/api/notes/99"))
+        mockMvc.perform(delete("/api/notes/99").header("X-User", "alice"))
                 .andExpect(status().isNotFound());
     }
 
-    private void createNote(String title, String content) throws Exception {
+    private void createNote(String owner, String title, String content, String visibility) throws Exception {
         mockMvc.perform(post("/api/notes")
+                        .header("X-User", owner)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "title": "%s",
-                                  "content": "%s"
+                                  "content": "%s",
+                                  "visibility": "%s"
                                 }
-                                """.formatted(title, content)))
+                                """.formatted(title, content, visibility)))
                 .andExpect(status().isOk());
     }
 }

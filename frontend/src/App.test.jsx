@@ -5,10 +5,10 @@ import userEvent from '@testing-library/user-event'
 import App from './App'
 
 const notes = [
-  { id: 1, title: 'Release plan', content: 'Ship the board update', priority: 'Alta' },
-  { id: 2, title: 'Ideas', content: 'Search polish', priority: 'Media' },
-  { id: 3, title: 'Archive', content: 'Old reference', priority: 'Baja' },
-  { id: 4, title: 'Retro', content: 'Missing priority fallback' },
+  { id: 1, title: 'Release plan', content: 'Ship the board update', priority: 'Alta', visibility: 'PUBLIC', owner: 'alice' },
+  { id: 2, title: 'Ideas', content: 'Search polish', priority: 'Media', visibility: 'PRIVATE', owner: 'alice' },
+  { id: 3, title: 'Archive', content: 'Old reference', priority: 'Baja', visibility: 'PUBLIC', owner: 'bob' },
+  { id: 4, title: 'Retro', content: 'Missing priority fallback', visibility: 'PUBLIC', owner: 'alice' },
 ]
 
 function mockNotesApi(responseNotes = notes) {
@@ -18,10 +18,10 @@ function mockNotesApi(responseNotes = notes) {
   })
 }
 
-async function renderLoadedApp(responseNotes = notes) {
+async function renderLoadedApp(responseNotes = notes, expectedTitle = 'Release plan') {
   mockNotesApi(responseNotes)
   render(<App />)
-  await screen.findByText('Release plan')
+  await screen.findByText(expectedTitle)
 }
 
 beforeEach(() => {
@@ -95,13 +95,64 @@ describe('App note logic', () => {
     })
   })
 
-  test('uses priority fallback when editing a note without priority', async () => {
+  test('shows visibility and owner labels', async () => {
+    await renderLoadedApp()
+
+    const releaseCard = screen.getByText('Release plan').closest('li')
+    const ideasCard = screen.getByText('Ideas').closest('li')
+
+    expect(within(releaseCard).getByText('Public')).toBeInTheDocument()
+    expect(within(releaseCard).getByText('Created by alice')).toBeInTheDocument()
+    expect(within(ideasCard).getByText('Private')).toBeInTheDocument()
+  })
+
+  test('uses logged-in user in request headers when loading and saving notes', async () => {
     const user = userEvent.setup()
     await renderLoadedApp()
 
-    const retroCard = screen.getByText('Retro').closest('li')
-    await user.click(within(retroCard).getByRole('button', { name: 'Edit' }))
+    await user.type(screen.getByLabelText('Username'), 'alice')
+    await user.click(screen.getByRole('button', { name: 'Log in' }))
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenLastCalledWith('http://localhost:8080/api/notes', { headers: { 'X-User': 'alice' } })
+    })
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 5,
+        title: 'Private draft',
+        content: 'Secret',
+        priority: 'Media',
+        visibility: 'PRIVATE',
+        owner: 'alice',
+      }),
+    })
+
+    await user.type(screen.getByLabelText('Title'), 'Private draft')
+    await user.selectOptions(screen.getByLabelText('Visibility'), 'PRIVATE')
+    await user.click(screen.getByRole('button', { name: 'Create note' }))
+
+    expect(global.fetch).toHaveBeenLastCalledWith(
+      'http://localhost:8080/api/notes',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-User': 'alice' },
+      }),
+    )
+  })
+
+  test('uses priority and visibility fallback when editing a note without those fields', async () => {
+    const user = userEvent.setup()
+    await renderLoadedApp([{ id: 4, title: 'Retro', content: 'Missing fallback', owner: 'alice' }], 'Retro')
+
+    await user.type(screen.getByLabelText('Username'), 'alice')
+    await user.click(screen.getByRole('button', { name: 'Log in' }))
+
+    const retroCard = await screen.findByText('Retro')
+    await user.click(within(retroCard.closest('li')).getByRole('button', { name: 'Edit' }))
 
     expect(screen.getByLabelText('Priority')).toHaveValue('Media')
+    expect(screen.getByLabelText('Visibility')).toHaveValue('PUBLIC')
   })
 })

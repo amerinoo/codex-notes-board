@@ -13,6 +13,8 @@ public class Note {
     private String title;
     private String content;
     private String priority;
+    private String visibility;
+    private String owner;
     private Instant createdAt;
     private Instant updatedAt;
 }
